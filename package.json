@@ -16,5 +16,8 @@
     "@monolambda/s3": "^1.0.1",
     "bluebird": "^3.5.0",
     "chalk": "^2.0.1"
+  },
+  "devDependencies": {
+    "octopublish": "^0.5.0"
   }
 }
