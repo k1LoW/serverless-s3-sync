@@ -1,0 +1,20 @@
+{
+  "name": "serverless-s3-sync",
+  "version": "0.0.1",
+  "description": "A plugin to sync local directories and S3 prefixes for Serverless Framework.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "serverless",
+    "s3"
+  ],
+  "author": "k1LoW <k1lowxb@gmail.com> (https://github.com/k1LoW)",
+  "license": "MIT",
+  "dependencies": {
+    "@monolambda/s3": "^1.0.1",
+    "bluebird": "^3.5.0",
+    "chalk": "^2.0.1"
+  }
+}
