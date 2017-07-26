@@ -43,6 +43,10 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: my-other-site
+        AccessControl: PublicRead
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: error.html
 ```
 
 ## Usage
