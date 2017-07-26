@@ -1,6 +1,11 @@
-# Serverless S3 Sync
+# Serverless S3 Sync [![npm](https://img.shields.io/npm/v/serverless-s3-sync.svg)]()
 
-> A plugin to sync local directories and S3 prefixes for Serverless Framework.
+> A plugin to sync local directories and S3 prefixes for Serverless Framework :zap: .
+
+## Use Case
+
+- Static Website ( `serverless-s3-sync` ) & Contact form backend ( `serverless` ) .
+- SPA ( `serverless` ) & assets ( `serverless-s3-sync` ) .
 
 ## Install
 
