@@ -54,3 +54,7 @@ resources:
 Run `sls deploy`, local directories and S3 prefixes are synced.
 
 Run `sls remove`, S3 objects in S3 prefixes are removed.
+
+### `sls s3sync`
+
+Sync local directories and S3 prefixes.
