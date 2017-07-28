@@ -15,9 +15,19 @@ class ServerlessS3Sync {
     this.s3Sync = this.serverless.service.custom.s3Sync;
     this.servicePath = this.serverless.service.serverless.config.servicePath;
 
+    this.commands = {
+      s3sync: {
+        usage: "Sync directories and S3 prefixes",
+        lifecycleEvents: [
+          'sync'
+        ]
+      }
+    };
+
     this.hooks = {
       'after:deploy:deploy': () => BbPromise.bind(this).then(this.sync),
-      'before:remove:remove': () => BbPromise.bind(this).then(this.clear)
+      'before:remove:remove': () => BbPromise.bind(this).then(this.clear),
+      's3sync:sync': () => BbPromise.bind(this).then(this.sync)
     };
   }
 
