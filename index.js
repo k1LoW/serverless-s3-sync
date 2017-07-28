@@ -14,6 +14,7 @@ class ServerlessS3Sync {
     this.options = options || {};
     this.s3Sync = this.serverless.service.custom.s3Sync;
     this.servicePath = this.serverless.service.serverless.config.servicePath;
+    this.messagePrefix = 'S3 Sync: ';
 
     this.commands = {
       s3sync: {
@@ -36,7 +37,7 @@ class ServerlessS3Sync {
       return Promise.resolve();
     }
     const cli = this.serverless.cli;
-    const messagePrefix = 'S3 Sync: ';
+    const messagePrefix = this.messagePrefix;
     cli.consoleLog(`${messagePrefix}${chalk.yellow('Syncing directories and S3 prefixes...')}`);
     const servicePath = this.servicePath;
     const promises = this.s3Sync.map((s) => {
@@ -90,7 +91,7 @@ class ServerlessS3Sync {
       return Promise.resolve();
     }
     const cli = this.serverless.cli;
-    const messagePrefix = 'S3 Sync: ';
+    const messagePrefix = this.messagePrefix;
     cli.consoleLog(`${messagePrefix}${chalk.yellow('Removing S3 objects...')}`);
     const promises = this.s3Sync.map((s) => {
       if (!s.hasOwnProperty('bucketPrefix')) {
