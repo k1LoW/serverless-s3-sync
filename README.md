@@ -1,4 +1,4 @@
-# Serverless S3 Sync [![npm](https://img.shields.io/npm/v/serverless-s3-sync.svg)]()
+# Serverless S3 Sync [![npm](https://img.shields.io/npm/v/serverless-s3-sync.svg)](https://www.npmjs.com/package/serverless-s3-sync)
 
 > A plugin to sync local directories and S3 prefixes for Serverless Framework :zap: .
 
