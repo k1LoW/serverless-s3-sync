@@ -3,10 +3,8 @@
 const BbPromise = require('bluebird');
 const AWS = require('aws-sdk');
 const s3 = require('@monolambda/s3');
-const client = s3.createClient({
-  s3Client: new AWS.S3({})
-});
 const chalk = require('chalk');
+const messagePrefix = 'S3 Sync: ';
 
 class ServerlessS3Sync {
   constructor(serverless, options) {
@@ -14,7 +12,6 @@ class ServerlessS3Sync {
     this.options = options || {};
     this.s3Sync = this.serverless.service.custom.s3Sync;
     this.servicePath = this.serverless.service.serverless.config.servicePath;
-    this.messagePrefix = 'S3 Sync: ';
 
     this.commands = {
       s3sync: {
@@ -32,12 +29,19 @@ class ServerlessS3Sync {
     };
   }
 
+  client() {
+    return s3.createClient({
+      s3Client: new AWS.S3({
+        region: this.serverless.getProvider('aws').getRegion()
+      })
+    });
+  }
+
   sync() {
     if (!Array.isArray(this.s3Sync)) {
       return Promise.resolve();
     }
     const cli = this.serverless.cli;
-    const messagePrefix = this.messagePrefix;
     cli.consoleLog(`${messagePrefix}${chalk.yellow('Syncing directories and S3 prefixes...')}`);
     const servicePath = this.servicePath;
     const promises = this.s3Sync.map((s) => {
@@ -58,7 +62,7 @@ class ServerlessS3Sync {
             Prefix: s.bucketPrefix
           }
         };
-        const uploader = client.uploadDir(params);
+        const uploader = this.client().uploadDir(params);
         uploader.on('error', (err) => {
           throw err;
         });
@@ -91,7 +95,6 @@ class ServerlessS3Sync {
       return Promise.resolve();
     }
     const cli = this.serverless.cli;
-    const messagePrefix = this.messagePrefix;
     cli.consoleLog(`${messagePrefix}${chalk.yellow('Removing S3 objects...')}`);
     const promises = this.s3Sync.map((s) => {
       if (!s.hasOwnProperty('bucketPrefix')) {
@@ -102,7 +105,7 @@ class ServerlessS3Sync {
           Bucket: s.bucketName,
           Prefix: s.bucketPrefix
         };
-        const uploader = client.deleteDir(params);
+        const uploader = this.client().deleteDir(params);
         uploader.on('error', (err) => {
           throw err;
         });
