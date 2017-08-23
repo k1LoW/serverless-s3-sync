@@ -30,9 +30,11 @@ class ServerlessS3Sync {
   }
 
   client() {
+    let awsCredentials = this.serverless.getProvider('aws').getCredentials()
     return s3.createClient({
       s3Client: new AWS.S3({
-        region: this.serverless.getProvider('aws').getRegion()
+        region: awsCredentials.region,
+        credentials: awsCredentials.credentials
       })
     });
   }
