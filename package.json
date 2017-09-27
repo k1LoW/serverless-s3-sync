@@ -11,6 +11,7 @@
     "s3"
   ],
   "author": "k1LoW <k1lowxb@gmail.com> (https://github.com/k1LoW)",
+  "repository": "k1LoW/serverless-s3-sync",
   "license": "MIT",
   "dependencies": {
     "@monolambda/s3": "^1.0.1",
