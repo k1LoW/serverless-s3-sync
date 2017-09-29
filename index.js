@@ -4,6 +4,7 @@ const BbPromise = require('bluebird');
 const AWS = require('aws-sdk');
 const s3 = require('@monolambda/s3');
 const chalk = require('chalk');
+
 const messagePrefix = 'S3 Sync: ';
 
 class ServerlessS3Sync {
@@ -15,7 +16,7 @@ class ServerlessS3Sync {
 
     this.commands = {
       s3sync: {
-        usage: "Sync directories and S3 prefixes",
+        usage: 'Sync directories and S3 prefixes',
         lifecycleEvents: [
           'sync'
         ]
@@ -30,7 +31,7 @@ class ServerlessS3Sync {
   }
 
   client() {
-    let awsCredentials = this.serverless.getProvider('aws').getCredentials()
+    const awsCredentials = this.serverless.getProvider('aws').getCredentials();
     return s3.createClient({
       s3Client: new AWS.S3({
         region: awsCredentials.region,
@@ -47,8 +48,9 @@ class ServerlessS3Sync {
     cli.consoleLog(`${messagePrefix}${chalk.yellow('Syncing directories and S3 prefixes...')}`);
     const servicePath = this.servicePath;
     const promises = this.s3Sync.map((s) => {
+      let bucketPrefix = '';
       if (!s.hasOwnProperty('bucketPrefix')) {
-        s.bucketPrefix = '';
+        bucketPrefix = s.bucketPrefix;
       }
       if (!s.bucketName || !s.localDir) {
         throw 'Invalid custom.s3Sync';
@@ -56,12 +58,12 @@ class ServerlessS3Sync {
       return new Promise((resolve) => {
         const params = {
           maxAsyncS3: 5,
-          localDir: servicePath + '/' + s.localDir,
+          localDir: [servicePath, s.localDir].join('/'),
           deleteRemoved: true,
           followSymlinks: false,
           s3Params: {
             Bucket: s.bucketName,
-            Prefix: s.bucketPrefix
+            Prefix: bucketPrefix
           }
         };
         const uploader = this.client().uploadDir(params);
@@ -73,7 +75,7 @@ class ServerlessS3Sync {
           if (uploader.progressTotal === 0) {
             return;
           }
-          let current = Math.round(uploader.progressAmount/uploader.progressTotal * 10) * 10;
+          const current = Math.round((uploader.progressAmount / uploader.progressTotal) * 10) * 10;
           if (current > percent) {
             percent = current;
             cli.printDot();
@@ -99,13 +101,14 @@ class ServerlessS3Sync {
     const cli = this.serverless.cli;
     cli.consoleLog(`${messagePrefix}${chalk.yellow('Removing S3 objects...')}`);
     const promises = this.s3Sync.map((s) => {
-      if (!s.hasOwnProperty('bucketPrefix')) {
-        s.bucketPrefix = '';
+      let bucketPrefix = '';
+      if (s.hasOwnProperty('bucketPrefix')) {
+        bucketPrefix = s.bucketPrefix;
       }
       return new Promise((resolve) => {
         const params = {
           Bucket: s.bucketName,
-          Prefix: s.bucketPrefix
+          Prefix: bucketPrefix
         };
         const uploader = this.client().deleteDir(params);
         uploader.on('error', (err) => {
@@ -116,7 +119,7 @@ class ServerlessS3Sync {
           if (uploader.progressTotal === 0) {
             return;
           }
-          let current = Math.round(uploader.progressAmount/uploader.progressTotal * 10) * 10;
+          const current = Math.round((uploader.progressAmount / uploader.progressTotal) * 10) * 10;
           if (current > percent) {
             percent = current;
             cli.printDot();
