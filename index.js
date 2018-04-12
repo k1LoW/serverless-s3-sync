@@ -52,6 +52,10 @@ class ServerlessS3Sync {
       if (!s.hasOwnProperty('bucketPrefix')) {
         bucketPrefix = s.bucketPrefix;
       }
+      let followSymlinks = false;
+      if (s.hasOwnProperty('followSymlinks')) {
+        followSymlinks = s.followSymlinks;
+      }
       if (!s.bucketName || !s.localDir) {
         throw 'Invalid custom.s3Sync';
       }
@@ -60,7 +64,7 @@ class ServerlessS3Sync {
           maxAsyncS3: 5,
           localDir: [servicePath, s.localDir].join('/'),
           deleteRemoved: true,
-          followSymlinks: false,
+          followSymlinks: followSymlinks,
           s3Params: {
             Bucket: s.bucketName,
             Prefix: bucketPrefix
