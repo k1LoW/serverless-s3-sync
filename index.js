@@ -52,6 +52,10 @@ class ServerlessS3Sync {
       if (!s.hasOwnProperty('bucketPrefix')) {
         bucketPrefix = s.bucketPrefix;
       }
+      let acl = 'private';
+      if (s.hasOwnProperty('acl')) {
+        acl = s.acl;
+      }
       if (!s.bucketName || !s.localDir) {
         throw 'Invalid custom.s3Sync';
       }
@@ -63,7 +67,8 @@ class ServerlessS3Sync {
           followSymlinks: false,
           s3Params: {
             Bucket: s.bucketName,
-            Prefix: bucketPrefix
+            Prefix: bucketPrefix,
+            ACL: acl
           }
         };
         const uploader = this.client().uploadDir(params);
