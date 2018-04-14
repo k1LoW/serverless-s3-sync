@@ -4,6 +4,7 @@ const BbPromise = require('bluebird');
 const AWS = require('aws-sdk');
 const s3 = require('@monolambda/s3');
 const chalk = require('chalk');
+const minimatch = require('minimatch');
 
 const messagePrefix = 'S3 Sync: ';
 
@@ -64,11 +65,30 @@ class ServerlessS3Sync {
         throw 'Invalid custom.s3Sync';
       }
       return new Promise((resolve) => {
+        const localDir = [servicePath, s.localDir].join('/');
+
         const params = {
           maxAsyncS3: 5,
-          localDir: [servicePath, s.localDir].join('/'),
+          localDir,
           deleteRemoved: true,
           followSymlinks: followSymlinks,
+          getS3Params: (localFile, stat, cb) => {
+            const s3Params = {};
+            cli.consoleLog(`Props : ${JSON.stringify(s.params, null, 2)}`);
+
+            if(Array.isArray(s.params)) {
+              s.params.forEach((param) => {
+                const glob = Object.keys(param)[0];
+                cli.consoleLog(`Glob : ${glob}`);
+                if(minimatch(localFile, `${localDir}/${glob}`)) {
+                  cli.consoleLog(`Setting props for: ${JSON.stringify(param[glob], null, 2)}`);
+                  Object.assign(s3Params, param[glob] || {});
+                }
+              });
+            }
+
+            cb(null, s3Params);
+          },
           s3Params: {
             Bucket: s.bucketName,
             Prefix: bucketPrefix,
