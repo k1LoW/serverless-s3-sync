@@ -74,14 +74,11 @@ class ServerlessS3Sync {
           followSymlinks: followSymlinks,
           getS3Params: (localFile, stat, cb) => {
             const s3Params = {};
-            cli.consoleLog(`Props : ${JSON.stringify(s.params, null, 2)}`);
 
             if(Array.isArray(s.params)) {
               s.params.forEach((param) => {
                 const glob = Object.keys(param)[0];
-                cli.consoleLog(`Glob : ${glob}`);
                 if(minimatch(localFile, `${localDir}/${glob}`)) {
-                  cli.consoleLog(`Setting props for: ${JSON.stringify(param[glob], null, 2)}`);
                   Object.assign(s3Params, param[glob] || {});
                 }
               });
