@@ -50,7 +50,7 @@ class ServerlessS3Sync {
     const servicePath = this.servicePath;
     const promises = this.s3Sync.map((s) => {
       let bucketPrefix = '';
-      if (!s.hasOwnProperty('bucketPrefix')) {
+      if (s.hasOwnProperty('bucketPrefix')) {
         bucketPrefix = s.bucketPrefix;
       }
       let acl = 'private';
