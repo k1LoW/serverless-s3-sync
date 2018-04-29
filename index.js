@@ -1,7 +1,6 @@
 'use strict';
 
 const BbPromise = require('bluebird');
-const AWS = require('aws-sdk');
 const s3 = require('@monolambda/s3');
 const chalk = require('chalk');
 const minimatch = require('minimatch');
@@ -32,13 +31,14 @@ class ServerlessS3Sync {
   }
 
   client() {
-    const awsCredentials = this.serverless.getProvider('aws').getCredentials();
-    return s3.createClient({
-      s3Client: new AWS.S3({
-        region: awsCredentials.region,
-        credentials: awsCredentials.credentials
-      })
+    const provider = this.serverless.getProvider('aws');
+    const awsCredentials = provider.getCredentials();
+    const awsS3Client = new provider.sdk.S3({
+      region: awsCredentials.region,
+      credentials: awsCredentials.credentials,
     });
+
+    return s3.createClient(awsS3Client);
   }
 
   sync() {
