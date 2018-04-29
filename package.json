@@ -1,6 +1,6 @@
 {
   "name": "serverless-s3-sync",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "A plugin to sync local directories and S3 prefixes for Serverless Framework.",
   "main": "index.js",
   "scripts": {
@@ -20,6 +20,6 @@
     "minimatch": "^3.0.4"
   },
   "devDependencies": {
-    "octopublish": "^0.5.0"
+    "octopublish": "^0.6.0"
   }
 }
