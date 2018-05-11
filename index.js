@@ -61,6 +61,10 @@ class ServerlessS3Sync {
       if (s.hasOwnProperty('followSymlinks')) {
         followSymlinks = s.followSymlinks;
       }
+      let defaultContentType = undefined
+      if (s.hasOwnProperty('defaultContentType')) {
+        defaultContentType = s.defaultContentType;
+      }
       if (!s.bucketName || !s.localDir) {
         throw 'Invalid custom.s3Sync';
       }
@@ -92,6 +96,9 @@ class ServerlessS3Sync {
             ACL: acl
           }
         };
+        if (typeof(defaultContentType) != 'undefined') {
+          Object.assign(params, {defaultContentType: defaultContentType})
+        }
         const uploader = this.client().uploadDir(params);
         uploader.on('error', (err) => {
           throw err;
