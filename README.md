@@ -34,6 +34,7 @@ custom:
       localDir: path/to/other-site
       acl: public-read # optional
       followSymlinks: true # optional
+      defaultContentType: text/html # optional
       params: # optional
         - index.html:
             CacheControl: 'no-cache'
