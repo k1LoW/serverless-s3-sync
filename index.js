@@ -33,12 +33,12 @@ class ServerlessS3Sync {
   client() {
     const provider = this.serverless.getProvider('aws');
     const awsCredentials = provider.getCredentials();
-    const awsS3Client = new provider.sdk.S3({
+    const s3Client = new provider.sdk.S3({
       region: awsCredentials.region,
       credentials: awsCredentials.credentials,
     });
 
-    return s3.createClient(awsS3Client);
+    return s3.createClient({ s3Client });
   }
 
   sync() {
