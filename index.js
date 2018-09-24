@@ -68,13 +68,18 @@ class ServerlessS3Sync {
       if (!s.bucketName || !s.localDir) {
         throw 'Invalid custom.s3Sync';
       }
+      let deleteRemoved = true;
+      if (s.hasOwnProperty('deleteRemoved')) {
+          deleteRemoved = s.deleteRemoved;
+      }
+
       return new Promise((resolve) => {
         const localDir = [servicePath, s.localDir].join('/');
 
         const params = {
           maxAsyncS3: 5,
           localDir,
-          deleteRemoved: true,
+          deleteRemoved,
           followSymlinks: followSymlinks,
           getS3Params: (localFile, stat, cb) => {
             const s3Params = {};
