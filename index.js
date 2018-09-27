@@ -88,7 +88,9 @@ class ServerlessS3Sync {
               s.params.forEach((param) => {
                 const glob = Object.keys(param)[0];
                 if(minimatch(localFile, `${localDir}/${glob}`)) {
-                  Object.assign(s3Params, param[glob] || {});
+                  Object.keys(param).slice(1).map(key => {
+                    s3Params[key] = param[key]
+                  });
                 }
               });
             }
