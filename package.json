@@ -14,12 +14,9 @@
   "repository": "k1LoW/serverless-s3-sync",
   "license": "MIT",
   "dependencies": {
-    "@monolambda/s3": "^1.0.1",
-    "bluebird": "^3.5.0",
+    "@monolambda/s3": "^1.0.2",
+    "bluebird": "^3.5.2",
     "chalk": "^2.0.1",
     "minimatch": "^3.0.4"
-  },
-  "devDependencies": {
-    "octopublish": "^0.6.0"
   }
 }
