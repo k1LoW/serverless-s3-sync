@@ -4,6 +4,7 @@ const BbPromise = require('bluebird');
 const s3 = require('@monolambda/s3');
 const chalk = require('chalk');
 const minimatch = require('minimatch');
+const path = require('path');
 
 const messagePrefix = 'S3 Sync: ';
 
@@ -87,7 +88,7 @@ class ServerlessS3Sync {
             if(Array.isArray(s.params)) {
               s.params.forEach((param) => {
                 const glob = Object.keys(param)[0];
-                if(minimatch(localFile, `${localDir}/${glob}`)) {
+                if(minimatch(localFile, `${path.resolve(localDir)}/${glob}`)) {
                   Object.assign(s3Params, param[glob] || {});
                 }
               });
