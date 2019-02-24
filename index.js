@@ -43,10 +43,11 @@ class ServerlessS3Sync {
 
   sync() {
     const s3Sync = this.serverless.service.custom.s3Sync;
+    const cli = this.serverless.cli;
     if (!Array.isArray(s3Sync)) {
+      cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
       return Promise.resolve();
     }
-    const cli = this.serverless.cli;
     cli.consoleLog(`${messagePrefix}${chalk.yellow('Syncing directories and S3 prefixes...')}`);
     const servicePath = this.servicePath;
     const promises = s3Sync.map((s) => {
