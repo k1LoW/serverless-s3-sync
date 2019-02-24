@@ -44,6 +44,7 @@ class ServerlessS3Sync {
   sync() {
     const s3Sync = this.serverless.service.custom.s3Sync;
     if (!Array.isArray(s3Sync)) {
+      cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
       return Promise.resolve();
     }
     const cli = this.serverless.cli;
