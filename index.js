@@ -1,7 +1,7 @@
 'use strict';
 
 const BbPromise = require('bluebird');
-const s3 = require('@monolambda/s3');
+const s3 = require('@auth0/s3');
 const chalk = require('chalk');
 const minimatch = require('minimatch');
 const path = require('path');
