@@ -63,6 +63,8 @@ Run `sls deploy`, local directories and S3 prefixes are synced.
 
 Run `sls remove`, S3 objects in S3 prefixes are removed.
 
+Run `sls deploy --nos3sync`, deploy your serverless stack without syncing local directories and S3 prefixes.
+
 ### `sls s3sync`
 
 Sync local directories and S3 prefixes.
