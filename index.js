@@ -90,7 +90,7 @@ class ServerlessS3Sync {
               s.params.forEach((param) => {
                 const glob = Object.keys(param)[0];
                 if(minimatch(localFile, `${path.resolve(localDir)}/${glob}`)) {
-                  Object.assign(s3Params, param[glob] || {});
+                  Object.assign(s3Params, this.extractMetaParams(param) || {});
                 }
               });
             }
@@ -177,6 +177,15 @@ class ServerlessS3Sync {
         cli.consoleLog('');
         cli.consoleLog(`${messagePrefix}${chalk.yellow('Removed.')}`);
       });
+  }
+
+  extractMetaParams(config) {
+    const validParams = {};
+    const keys = Object.keys(config);
+    for (let i = 1; i < keys.length; i++) {
+      validParams[keys[i]] = config[keys[i]];
+    }
+    return validParams;
   }
 }
 
