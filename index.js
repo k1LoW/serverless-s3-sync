@@ -183,7 +183,7 @@ class ServerlessS3Sync {
     const validParams = {};
     const keys = Object.keys(config);
     for (let i = 0; i < keys.length; i++) {
-      validParams[keys[i]] = config[keys[i]];
+      Object.assign(validParams, config[keys[i]])
     }
     return validParams;
   }
