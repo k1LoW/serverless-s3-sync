@@ -5,6 +5,7 @@ const s3 = require('@auth0/s3');
 const chalk = require('chalk');
 const minimatch = require('minimatch');
 const path = require('path');
+const resolveStackOutput = require('./resolveStackOutput')
 
 const messagePrefix = 'S3 Sync: ';
 
@@ -67,7 +68,7 @@ class ServerlessS3Sync {
       if (s.hasOwnProperty('defaultContentType')) {
         defaultContentType = s.defaultContentType;
       }
-      if (!s.bucketName || !s.localDir) {
+      if ((!s.bucketName && !s.bucketNameKey) || !s.localDir) {
         throw 'Invalid custom.s3Sync';
       }
       let deleteRemoved = true;
@@ -75,56 +76,59 @@ class ServerlessS3Sync {
           deleteRemoved = s.deleteRemoved;
       }
 
-      return new Promise((resolve) => {
-        const localDir = [servicePath, s.localDir].join('/');
+      return this.getBucketName(s)
+        .then(bucketName => {
+          return new Promise((resolve) => {
+            const localDir = [servicePath, s.localDir].join('/');
 
-        const params = {
-          maxAsyncS3: 5,
-          localDir,
-          deleteRemoved,
-          followSymlinks: followSymlinks,
-          getS3Params: (localFile, stat, cb) => {
-            const s3Params = {};
+            const params = {
+              maxAsyncS3: 5,
+              localDir,
+              deleteRemoved,
+              followSymlinks: followSymlinks,
+              getS3Params: (localFile, stat, cb) => {
+                const s3Params = {};
 
-            if(Array.isArray(s.params)) {
-              s.params.forEach((param) => {
-                const glob = Object.keys(param)[0];
-                if(minimatch(localFile, `${path.resolve(localDir)}/${glob}`)) {
-                  Object.assign(s3Params, this.extractMetaParams(param) || {});
+                if(Array.isArray(s.params)) {
+                  s.params.forEach((param) => {
+                    const glob = Object.keys(param)[0];
+                    if(minimatch(localFile, `${path.resolve(localDir)}/${glob}`)) {
+                      Object.assign(s3Params, this.extractMetaParams(param) || {});
+                    }
+                  });
                 }
-              });
-            }
 
-            cb(null, s3Params);
-          },
-          s3Params: {
-            Bucket: s.bucketName,
-            Prefix: bucketPrefix,
-            ACL: acl
-          }
-        };
-        if (typeof(defaultContentType) != 'undefined') {
-          Object.assign(params, {defaultContentType: defaultContentType})
-        }
-        const uploader = this.client().uploadDir(params);
-        uploader.on('error', (err) => {
-          throw err;
+                cb(null, s3Params);
+              },
+              s3Params: {
+                Bucket: bucketName,
+                Prefix: bucketPrefix,
+                ACL: acl
+              }
+            };
+            if (typeof(defaultContentType) != 'undefined') {
+              Object.assign(params, {defaultContentType: defaultContentType})
+            }
+            const uploader = this.client().uploadDir(params);
+            uploader.on('error', (err) => {
+              throw err;
+            });
+            let percent = 0;
+            uploader.on('progress', () => {
+              if (uploader.progressTotal === 0) {
+                return;
+              }
+              const current = Math.round((uploader.progressAmount / uploader.progressTotal) * 10) * 10;
+              if (current > percent) {
+                percent = current;
+                cli.printDot();
+              }
+            });
+            uploader.on('end', () => {
+              resolve('done');
+            });
+          });
         });
-        let percent = 0;
-        uploader.on('progress', () => {
-          if (uploader.progressTotal === 0) {
-            return;
-          }
-          const current = Math.round((uploader.progressAmount / uploader.progressTotal) * 10) * 10;
-          if (current > percent) {
-            percent = current;
-            cli.printDot();
-          }
-        });
-        uploader.on('end', () => {
-          resolve('done');
-        });
-      });
     });
     return Promise.all(promises)
       .then(() => {
@@ -146,30 +150,33 @@ class ServerlessS3Sync {
       if (s.hasOwnProperty('bucketPrefix')) {
         bucketPrefix = s.bucketPrefix;
       }
-      return new Promise((resolve) => {
-        const params = {
-          Bucket: s.bucketName,
-          Prefix: bucketPrefix
-        };
-        const uploader = this.client().deleteDir(params);
-        uploader.on('error', (err) => {
-          throw err;
+      return this.getBucketName(s)
+        .then(bucketName => {
+          return new Promise((resolve) => {
+            const params = {
+              Bucket: bucketName,
+              Prefix: bucketPrefix
+            };
+            const uploader = this.client().deleteDir(params);
+            uploader.on('error', (err) => {
+              throw err;
+            });
+            let percent = 0;
+            uploader.on('progress', () => {
+              if (uploader.progressTotal === 0) {
+                return;
+              }
+              const current = Math.round((uploader.progressAmount / uploader.progressTotal) * 10) * 10;
+              if (current > percent) {
+                percent = current;
+                cli.printDot();
+              }
+            });
+            uploader.on('end', () => {
+              resolve('done');
+            });
+          });
         });
-        let percent = 0;
-        uploader.on('progress', () => {
-          if (uploader.progressTotal === 0) {
-            return;
-          }
-          const current = Math.round((uploader.progressAmount / uploader.progressTotal) * 10) * 10;
-          if (current > percent) {
-            percent = current;
-            cli.printDot();
-          }
-        });
-        uploader.on('end', () => {
-          resolve('done');
-        });
-      });
     });
     return Promise.all(promises)
       .then(() => {
@@ -186,6 +193,16 @@ class ServerlessS3Sync {
       validParams[keys[i]] = config[keys[i]];
     }
     return validParams;
+  }
+
+  getBucketName(s) {
+    if (s.bucketName) {
+      return Promise.resolve(s.bucketName)
+    } else if (s.bucketNameKey) {
+      return resolveStackOutput(this, s.bucketNameKey)
+    } else {
+      return Promise.reject("Unable to find bucketName. Please provide a value for bucketName or bucketNameKey")
+    }
   }
 }
 

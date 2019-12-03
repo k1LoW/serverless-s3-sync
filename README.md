@@ -40,6 +40,8 @@ custom:
             CacheControl: 'no-cache'
         - "*.js":
             CacheControl: 'public, max-age=31536000'
+    - bucketNameKey: AnotherBucketNameOutputKey
+      localDir: path/to/another
 
 resources:
   Resources:
@@ -55,6 +57,11 @@ resources:
         WebsiteConfiguration:
           IndexDocument: index.html
           ErrorDocument: error.html
+    AnotherBucket:
+      Type: AWS::S3::Bucket
+  Outputs:
+    AnotherBucketNameOutputKey:
+      Value: !Ref AnotherBucket
 ```
 
 ## Usage
