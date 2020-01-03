@@ -220,6 +220,7 @@ class ServerlessS3Sync {
             Key: file.name.replace(localDir, ''),
             Bucket: s.bucketName,
             Metadata: file.params,
+            ACL: acl,
             MetadataDirective: 'REPLACE'
           };
           const uploader = this.client().copyObject(params);
