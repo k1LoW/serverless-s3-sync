@@ -5,8 +5,8 @@ const s3 = require('@auth0/s3');
 const chalk = require('chalk');
 const minimatch = require('minimatch');
 const path = require('path');
+const fs = require('fs');
 const resolveStackOutput = require('./resolveStackOutput')
-
 const messagePrefix = 'S3 Sync: ';
 
 class ServerlessS3Sync {
@@ -19,7 +19,8 @@ class ServerlessS3Sync {
       s3sync: {
         usage: 'Sync directories and S3 prefixes',
         lifecycleEvents: [
-          'sync'
+          'sync',
+          'metadata'
         ]
       }
     };
@@ -27,7 +28,8 @@ class ServerlessS3Sync {
     this.hooks = {
       'after:deploy:deploy': () => options.nos3sync?undefined:BbPromise.bind(this).then(this.sync),
       'before:remove:remove': () => BbPromise.bind(this).then(this.clear),
-      's3sync:sync': () => BbPromise.bind(this).then(this.sync)
+      's3sync:sync': () => BbPromise.bind(this).then(this.sync),
+      's3sync:metadata': () => BbPromise.bind(this).then(this.syncMetadata)
     };
   }
 
@@ -184,6 +186,79 @@ class ServerlessS3Sync {
         cli.consoleLog('');
         cli.consoleLog(`${messagePrefix}${chalk.yellow('Removed.')}`);
       });
+  }
+
+  syncMetadata() {
+    const s3Sync = this.serverless.service.custom.s3Sync;
+    const cli = this.serverless.cli;
+    if (!Array.isArray(s3Sync)) {
+      cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
+      return Promise.resolve();
+    }
+    cli.consoleLog(`${messagePrefix}${chalk.yellow('Syncing metadata...')}`);
+    const servicePath = this.servicePath;
+    const promises = s3Sync.map( async (s) => {
+      let bucketPrefix = '';
+      if (s.hasOwnProperty('bucketPrefix')) {
+        bucketPrefix = s.bucketPrefix;
+      }
+      let acl = 'private';
+      if (s.hasOwnProperty('acl')) {
+        acl = s.acl;
+      }
+      if (!s.bucketName || !s.localDir) {
+        throw 'Invalid custom.s3Sync';
+      }
+      const localDir = [servicePath, s.localDir].join('/');
+      let filesToSync = [];
+      if(Array.isArray(s.params)) {
+        s.params.forEach((param) => {
+          const glob = Object.keys(param)[0];
+          let files = this.getLocalFiles(localDir, []);
+          minimatch.match(files, `${path.resolve(localDir)}/${glob}`, {matchBase: true}).forEach((match) => {
+            filesToSync.push({name: match, params: this.extractMetaParams(param)});
+          });
+        });
+      }
+      return filesToSync.forEach((file) => {
+        return new Promise((resolve) => {
+          let params = {
+            CopySource: file.name.replace(localDir, `${s.bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`),
+            Key: file.name.replace(localDir, ''),
+            Bucket: s.bucketName,
+            Metadata: file.params,
+            ACL: acl,
+            MetadataDirective: 'REPLACE'
+          };
+          const uploader = this.client().copyObject(params);
+          uploader.on('error', (err) => {
+            throw err;
+          });
+          uploader.on('end', () => {
+            resolve('done');
+          });
+        });
+      });
+    });
+    cli.consoleLog(`${JSON.stringify(promises)}`);
+    return Promise.all((promises))
+      .then(() => {
+        cli.printDot();
+        cli.consoleLog('');
+        cli.consoleLog(`${messagePrefix}${chalk.yellow('Synced metadata.')}`);
+      });
+  }
+  
+  getLocalFiles(dir, files) {
+    fs.readdirSync(dir).forEach(file => {
+      let fullPath = path.join(dir, file);
+      if (fs.lstatSync(fullPath).isDirectory()) {
+        this.getLocalFiles(fullPath, files);
+      } else {
+        files.push(fullPath);
+      }  
+    });
+    return files;
   }
 
   extractMetaParams(config) {
