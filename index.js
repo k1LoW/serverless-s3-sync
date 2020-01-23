@@ -224,13 +224,9 @@ class ServerlessS3Sync {
       return filesToSync.forEach((file) => {
         return new Promise((resolve) => {
           let contentTypeObject = {};
-          let defaultContentType = null;
-          if (s.hasOwnProperty('defaultContentType')) {
-            defaultContentType = s.defaultContentType;
-          }
-          let detectedContentType = mime.getType(file.name, defaultContentType);
-          if (detectedContentType !== null) {
-            contentTypeObject.ContentType = detectedContentType
+          let detectedContentType = mime.getType(file.name)
+          if (detectedContentType !== null || s.hasOwnProperty('defaultContentType')) {
+            contentTypeObject.ContentType = detectedContentType ? detectedContentType : s.defaultContentType;
           }
           let params = {
             ...contentTypeObject,
