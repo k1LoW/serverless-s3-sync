@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const resolveStackOutput = require('./resolveStackOutput')
 const messagePrefix = 'S3 Sync: ';
+const mime = require('mime');
 
 class ServerlessS3Sync {
   constructor(serverless, options) {
@@ -222,13 +223,25 @@ class ServerlessS3Sync {
       }
       return filesToSync.forEach((file) => {
         return new Promise((resolve) => {
+          let contentTypeObject = {};
+          let defaultContentType = null;
+          if (s.hasOwnProperty('defaultContentType')) {
+            defaultContentType = s.defaultContentType;
+          }
+          let detectedContentType = mime.getType(file.name, defaultContentType);
+          if (detectedContentType !== null) {
+            contentTypeObject.ContentType = detectedContentType
+          }
           let params = {
-            CopySource: file.name.replace(localDir, `${s.bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`),
-            Key: file.name.replace(localDir, ''),
-            Bucket: s.bucketName,
-            Metadata: file.params,
-            ACL: acl,
-            MetadataDirective: 'REPLACE'
+            ...contentTypeObject,
+            ...file.params,
+            ...{
+              CopySource: file.name.replace(localDir, `${s.bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`),
+              Key: file.name.replace(localDir, ''),
+              Bucket: s.bucketName,
+              ACL: acl,
+              MetadataDirective: 'REPLACE'
+            }
           };
           if (typeof file.params.ContentType !== 'undefined') {
             params.ContentType = file.params.ContentType;
@@ -253,7 +266,7 @@ class ServerlessS3Sync {
         cli.consoleLog(`${messagePrefix}${chalk.yellow('Synced metadata.')}`);
       });
   }
-  
+
   getLocalFiles(dir, files) {
     fs.readdirSync(dir).forEach(file => {
       let fullPath = path.join(dir, file);
@@ -261,7 +274,7 @@ class ServerlessS3Sync {
         this.getLocalFiles(fullPath, files);
       } else {
         files.push(fullPath);
-      }  
+      }
     });
     return files;
   }
