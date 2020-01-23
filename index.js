@@ -209,7 +209,7 @@ class ServerlessS3Sync {
       if (!s.bucketName || !s.localDir) {
         throw 'Invalid custom.s3Sync';
       }
-      const localDir = [servicePath, s.localDir].join('/');
+      const localDir = [servicePath, s.localDir].join('/').replace(/\/?$/, '/');
       let filesToSync = [];
       if(Array.isArray(s.params)) {
         s.params.forEach((param) => {
@@ -248,7 +248,7 @@ class ServerlessS3Sync {
         cli.consoleLog(`${messagePrefix}${chalk.yellow('Synced metadata.')}`);
       });
   }
-  
+
   getLocalFiles(dir, files) {
     fs.readdirSync(dir).forEach(file => {
       let fullPath = path.join(dir, file);
@@ -256,7 +256,7 @@ class ServerlessS3Sync {
         this.getLocalFiles(fullPath, files);
       } else {
         files.push(fullPath);
-      }  
+      }
     });
     return files;
   }
