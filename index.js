@@ -239,11 +239,6 @@ class ServerlessS3Sync {
               MetadataDirective: 'REPLACE'
             }
           };
-          if (typeof file.params.ContentType !== 'undefined') {
-            params.ContentType = file.params.ContentType;
-          } else if (typeof s.defaultContentType !== 'undefined') {
-            params.ContentType = s.defaultContentType;
-          }
           const uploader = this.client().copyObject(params);
           uploader.on('error', (err) => {
             throw err;
