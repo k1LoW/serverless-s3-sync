@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const resolveStackOutput = require('./resolveStackOutput')
 const messagePrefix = 'S3 Sync: ';
+const mime = require('mime');
 
 class ServerlessS3Sync {
   constructor(serverless, options) {
@@ -222,13 +223,21 @@ class ServerlessS3Sync {
       }
       return filesToSync.forEach((file) => {
         return new Promise((resolve) => {
+          let contentTypeObject = {};
+          let detectedContentType = mime.getType(file.name)
+          if (detectedContentType !== null || s.hasOwnProperty('defaultContentType')) {
+            contentTypeObject.ContentType = detectedContentType ? detectedContentType : s.defaultContentType;
+          }
           let params = {
-            CopySource: file.name.replace(localDir, `${s.bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`),
-            Key: file.name.replace(localDir, ''),
-            Bucket: s.bucketName,
-            Metadata: file.params,
-            ACL: acl,
-            MetadataDirective: 'REPLACE'
+            ...contentTypeObject,
+            ...file.params,
+            ...{
+              CopySource: file.name.replace(localDir, `${s.bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`),
+              Key: file.name.replace(localDir, ''),
+              Bucket: s.bucketName,
+              ACL: acl,
+              MetadataDirective: 'REPLACE'
+            }
           };
           const uploader = this.client().copyObject(params);
           uploader.on('error', (err) => {
