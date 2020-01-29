@@ -42,7 +42,7 @@ class ServerlessS3Sync {
       credentials: awsCredentials.credentials,
     });
 
-    return s3.createClient({ s3Client });
+    return s3.createClient({s3Client});
   }
 
   sync() {
@@ -76,7 +76,7 @@ class ServerlessS3Sync {
       }
       let deleteRemoved = true;
       if (s.hasOwnProperty('deleteRemoved')) {
-          deleteRemoved = s.deleteRemoved;
+        deleteRemoved = s.deleteRemoved;
       }
 
       return this.getBucketName(s)
@@ -92,10 +92,10 @@ class ServerlessS3Sync {
               getS3Params: (localFile, stat, cb) => {
                 const s3Params = {};
 
-                if(Array.isArray(s.params)) {
+                if (Array.isArray(s.params)) {
                   s.params.forEach((param) => {
                     const glob = Object.keys(param)[0];
-                    if(minimatch(localFile, `${path.resolve(localDir)}/${glob}`)) {
+                    if (minimatch(localFile, `${path.resolve(localDir)}/${glob}`)) {
                       Object.assign(s3Params, this.extractMetaParams(param) || {});
                     }
                   });
@@ -109,7 +109,7 @@ class ServerlessS3Sync {
                 ACL: acl
               }
             };
-            if (typeof(defaultContentType) != 'undefined') {
+            if (typeof (defaultContentType) != 'undefined') {
               Object.assign(params, {defaultContentType: defaultContentType})
             }
             const uploader = this.client().uploadDir(params);
@@ -198,7 +198,7 @@ class ServerlessS3Sync {
     }
     cli.consoleLog(`${messagePrefix}${chalk.yellow('Syncing metadata...')}`);
     const servicePath = this.servicePath;
-    const promises = s3Sync.map( async (s) => {
+    const promises = s3Sync.map(async (s) => {
       let bucketPrefix = '';
       if (s.hasOwnProperty('bucketPrefix')) {
         bucketPrefix = s.bucketPrefix;
@@ -212,7 +212,7 @@ class ServerlessS3Sync {
       }
       const localDir = path.join(servicePath, s.localDir);
       let filesToSync = [];
-      if(Array.isArray(s.params)) {
+      if (Array.isArray(s.params)) {
         s.params.forEach((param) => {
           const glob = Object.keys(param)[0];
           let files = this.getLocalFiles(localDir, []);
@@ -232,7 +232,7 @@ class ServerlessS3Sync {
             ...contentTypeObject,
             ...file.params,
             ...{
-              CopySource: file.name.replace(localDir, `${s.bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`),
+              CopySource: file.name.replace(localDir + path.sep, `${s.bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`),
               Key: file.name.replace(localDir, ''),
               Bucket: s.bucketName,
               ACL: acl,
