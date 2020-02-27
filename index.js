@@ -10,6 +10,8 @@ const resolveStackOutput = require('./resolveStackOutput')
 const messagePrefix = 'S3 Sync: ';
 const mime = require('mime');
 
+const toS3Path = (osPath) => osPath.replace(new RegExp(`\\${path.sep}`, 'g'), '/');
+
 class ServerlessS3Sync {
   constructor(serverless, options) {
     this.serverless = serverless;
@@ -232,8 +234,8 @@ class ServerlessS3Sync {
             ...contentTypeObject,
             ...file.params,
             ...{
-              CopySource: file.name.replace(path.resolve(localDir) + path.sep, `${s.bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`).replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
-              Key: file.name.replace(path.resolve(localDir) + path.sep, '').replace(new RegExp(`\\${path.sep}`, 'g'), '/'),
+              CopySource: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, `${s.bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`)),
+              Key: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, '')),
               Bucket: s.bucketName,
               ACL: acl,
               MetadataDirective: 'REPLACE'
