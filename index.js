@@ -209,7 +209,7 @@ class ServerlessS3Sync {
       if (s.hasOwnProperty('acl')) {
         acl = s.acl;
       }
-      if (!s.bucketName || !s.localDir) {
+      if ((!s.bucketName && !s.bucketNameKey) || !s.localDir) {
         throw 'Invalid custom.s3Sync';
       }
       const localDir = path.join(servicePath, s.localDir);
