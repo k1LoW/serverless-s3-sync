@@ -39,7 +39,9 @@ class ServerlessS3Sync {
   client() {
     const provider = this.serverless.getProvider('aws');
 	let awsCredentials, region;
-	if (provider.cachedCredentials) {
+	if (provider.cachedCredentials && typeof(provider.cachedCredentials.accessKeyId) != 'undefined'
+		&& typeof(provider.cachedCredentials.secretAccessKey) != 'undefined'
+		&& typeof(provider.cachedCredentials.sessionToken) != 'undefined') {
 		region = provider.cachedCredentials.region
 		awsCredentials = {
 			accessKeyId: provider.cachedCredentials.accessKeyId,
