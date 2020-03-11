@@ -50,7 +50,6 @@ class ServerlessS3Sync {
 		region = provider.getCredentials().region
 		awsCredentials = provider.getCredentials().credentials
 	}
-	console.log(awsCredentials)
     const s3Client = new provider.sdk.S3({
       region: region,
       credentials: awsCredentials
