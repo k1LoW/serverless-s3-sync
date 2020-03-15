@@ -24,7 +24,22 @@ class ServerlessS3Sync {
         lifecycleEvents: [
           'sync',
           'metadata'
-        ]
+        ],
+        commands: {
+          bucket: {
+            options: {
+              bucket: {
+                usage: 'Specify the bucket you want to deploy (e.g. "-b myBucket1")',
+                required: true,
+                shortcut: 'b'
+              }
+            },
+            lifecycleEvents: [
+              'sync',
+              'metadata'
+            ]
+          }
+        }
       }
     };
 
@@ -32,7 +47,9 @@ class ServerlessS3Sync {
       'after:deploy:deploy': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata),
       'before:remove:remove': () => BbPromise.bind(this).then(this.clear),
       's3sync:sync': () => BbPromise.bind(this).then(this.sync),
-      's3sync:metadata': () => BbPromise.bind(this).then(this.syncMetadata)
+      's3sync:metadata': () => BbPromise.bind(this).then(this.syncMetadata),
+      's3sync:bucket:sync': () => BbPromise.bind(this).then(this.sync),
+      's3sync:bucket:metadata': () => BbPromise.bind(this).then(this.syncMetadata)
     };
   }
 
@@ -66,7 +83,11 @@ class ServerlessS3Sync {
       cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
       return Promise.resolve();
     }
-    cli.consoleLog(`${messagePrefix}${chalk.yellow('Syncing directories and S3 prefixes...')}`);
+    if (this.options.bucket) {
+      cli.consoleLog(`${messagePrefix}${chalk.yellow(`Syncing directory attached to S3 bucket ${this.options.bucket}...`)}`);
+    } else {
+      cli.consoleLog(`${messagePrefix}${chalk.yellow('Syncing directories and S3 prefixes...')}`);
+    }
     const servicePath = this.servicePath;
     const promises = s3Sync.map((s) => {
       let bucketPrefix = '';
@@ -95,6 +116,11 @@ class ServerlessS3Sync {
 
       return this.getBucketName(s)
         .then(bucketName => {
+          if (this.options.bucket && bucketName != this.options.bucket) {
+            // if the bucket option is given, that means we're in the subcommand where we're
+            // only syncing one bucket, so only continue if this bucket name matches
+            return null;
+          }
           return new Promise((resolve) => {
             const localDir = [servicePath, s.localDir].join('/');
 
@@ -235,35 +261,43 @@ class ServerlessS3Sync {
           });
         });
       }
-      return filesToSync.forEach((file) => {
-        return new Promise((resolve) => {
-          let contentTypeObject = {};
-          let detectedContentType = mime.getType(file.name)
-          if (detectedContentType !== null || s.hasOwnProperty('defaultContentType')) {
-            contentTypeObject.ContentType = detectedContentType ? detectedContentType : s.defaultContentType;
+      return this.getBucketName(s)
+        .then(bucketName => {
+          if (this.options && this.options.bucket && bucketName != this.options.bucket) {
+            // if the bucket option is given, that means we're in the subcommand where we're
+            // only syncing one bucket, so only continue if this bucket name matches
+            return null;
           }
-          let params = {
-            ...contentTypeObject,
-            ...file.params,
-            ...{
-              CopySource: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, `${s.bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`)),
-              Key: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, '')),
-              Bucket: s.bucketName,
-              ACL: acl,
-              MetadataDirective: 'REPLACE'
-            }
-          };
-          const uploader = this.client().copyObject(params);
-          uploader.on('error', (err) => {
-            throw err;
-          });
-          uploader.on('end', () => {
-            resolve('done');
-          });
+
+          return Promise.all(filesToSync.map((file) => {
+            return new Promise((resolve) => {
+              let contentTypeObject = {};
+              let detectedContentType = mime.getType(file.name)
+              if (detectedContentType !== null || s.hasOwnProperty('defaultContentType')) {
+                contentTypeObject.ContentType = detectedContentType ? detectedContentType : s.defaultContentType;
+              }
+              let params = {
+                ...contentTypeObject,
+                ...file.params,
+                ...{
+                  CopySource: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, `${bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`)),
+                  Key: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, '')),
+                  Bucket: bucketName,
+                  ACL: acl,
+                  MetadataDirective: 'REPLACE'
+                }
+              };
+              const uploader = this.client().copyObject(params);
+              uploader.on('error', (err) => {
+                throw err;
+              });
+              uploader.on('end', () => {
+                resolve('done');
+              });
+            });
+          }));
         });
-      });
     });
-    cli.consoleLog(`${JSON.stringify(promises)}`);
     return Promise.all((promises))
       .then(() => {
         cli.printDot();
