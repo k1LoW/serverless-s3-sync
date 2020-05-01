@@ -9,6 +9,7 @@ const fs = require('fs');
 const resolveStackOutput = require('./resolveStackOutput')
 const messagePrefix = 'S3 Sync: ';
 const mime = require('mime');
+const child_process = require('child_process');
 
 const toS3Path = (osPath) => osPath.replace(new RegExp(`\\${path.sep}`, 'g'), '/');
 
@@ -113,6 +114,10 @@ class ServerlessS3Sync {
       if (s.hasOwnProperty('deleteRemoved')) {
           deleteRemoved = s.deleteRemoved;
       }
+      let preCommand = undefined
+      if (s.hasOwnProperty('preCommand')) {
+          preCommand = s.preCommand;
+      }
 
       return this.getBucketName(s)
         .then(bucketName => {
@@ -123,6 +128,11 @@ class ServerlessS3Sync {
           }
           return new Promise((resolve) => {
             const localDir = [servicePath, s.localDir].join('/');
+
+            if (typeof(preCommand) != 'undefined') {
+              cli.consoleLog(`${messagePrefix}${chalk.yellow('Running pre-command...')}`);
+              child_process.execSync(preCommand, { stdio: 'inherit' });
+            }
 
             const params = {
               maxAsyncS3: 5,
