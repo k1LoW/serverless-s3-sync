@@ -40,6 +40,9 @@ custom:
             CacheControl: 'no-cache'
         - "*.js":
             CacheControl: 'public, max-age=31536000'
+      bucketTags: # optional, these are appended to existing S3 bucket tags (overwriting tags with the same key)
+        tagKey1: tagValue1
+        tagKey2: tagValue2
     - bucketNameKey: AnotherBucketNameOutputKey
       localDir: path/to/another
 

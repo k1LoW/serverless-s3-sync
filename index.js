@@ -24,7 +24,8 @@ class ServerlessS3Sync {
         usage: 'Sync directories and S3 prefixes',
         lifecycleEvents: [
           'sync',
-          'metadata'
+          'metadata',
+          'tags'
         ],
         commands: {
           bucket: {
@@ -37,7 +38,8 @@ class ServerlessS3Sync {
             },
             lifecycleEvents: [
               'sync',
-              'metadata'
+              'metadata',
+              'tags'
             ]
           }
         }
@@ -45,12 +47,14 @@ class ServerlessS3Sync {
     };
 
     this.hooks = {
-      'after:deploy:deploy': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata),
+      'after:deploy:deploy': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
       'before:remove:remove': () => BbPromise.bind(this).then(this.clear),
       's3sync:sync': () => BbPromise.bind(this).then(this.sync),
       's3sync:metadata': () => BbPromise.bind(this).then(this.syncMetadata),
+      's3sync:tags': () => BbPromise.bind(this).then(this.syncBucketTags),
       's3sync:bucket:sync': () => BbPromise.bind(this).then(this.sync),
-      's3sync:bucket:metadata': () => BbPromise.bind(this).then(this.syncMetadata)
+      's3sync:bucket:metadata': () => BbPromise.bind(this).then(this.syncMetadata),
+      's3sync:bucket:tags': () => BbPromise.bind(this).then(this.syncBucketTags),
     };
   }
 
@@ -314,6 +318,75 @@ class ServerlessS3Sync {
         cli.consoleLog('');
         cli.consoleLog(`${messagePrefix}${chalk.yellow('Synced metadata.')}`);
       });
+  }
+
+  syncBucketTags() {
+    const s3Sync = this.serverless.service.custom.s3Sync;
+    const cli = this.serverless.cli;
+    if (!Array.isArray(s3Sync)) {
+      cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
+      return Promise.resolve();
+    }
+    cli.consoleLog(`${messagePrefix}${chalk.yellow('Updating bucket tags...')}`);
+
+    const promises = s3Sync.map( async (s) => {
+      if (!s.bucketName && !s.bucketNameKey) {
+        throw 'Invalid custom.s3Sync';
+      }
+
+      // convert the tag key/value pairs into a TagSet structure for the putBucketTagging command
+      let tagsToUpdate = [];
+      if (s.bucketTags) {
+        tagsToUpdate = Object.keys(s.bucketTags).map(tagKey => ({
+          Key: tagKey,
+          Value: s.bucketTags[tagKey]
+        }));
+      }
+
+      return this.getBucketName(s)
+        .then(bucketName => {
+          if (this.options && this.options.bucket && bucketName != this.options.bucket) {
+            // if the bucket option is given, that means we're in the subcommand where we're
+            // only syncing one bucket, so only continue if this bucket name matches
+            return null;
+          }
+
+          // AWS.S3 does not have an option to append tags to a bucket, it can only rewrite the whole set of tags
+          // To avoid removing system tags set by other tools, we read the existing tags, merge our tags in the list
+          // and then write them all back
+          return this.client().s3.getBucketTagging({ Bucket: bucketName }).promise()
+            .then(data => data.TagSet)
+            .then(existingTagSet => {
+
+              this.mergeTags(existingTagSet, tagsToUpdate);
+              const putParams = {
+                Bucket: bucketName,
+                Tagging: {
+                  TagSet: existingTagSet
+                }
+              };
+              return this.client().s3.putBucketTagging(putParams).promise();
+            })
+
+        });
+    });
+    return Promise.all((promises))
+      .then(() => {
+        cli.printDot();
+        cli.consoleLog('');
+        cli.consoleLog(`${messagePrefix}${chalk.yellow('Updated bucket tags.')}`);
+      });
+  }
+
+  mergeTags(existingTagSet, tagsToMerge) {
+    tagsToMerge.forEach(tag => {
+      const existingTag = existingTagSet.find(et => et.Key === tag.Key);
+      if (existingTag) {
+        existingTag.Value = tag.Value;
+      } else {
+        existingTagSet.push(tag);
+      }
+    });
   }
 
   getLocalFiles(dir, files) {
