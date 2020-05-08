@@ -334,14 +334,17 @@ class ServerlessS3Sync {
         throw 'Invalid custom.s3Sync';
       }
 
-      // convert the tag key/value pairs into a TagSet structure for the putBucketTagging command
-      let tagsToUpdate = [];
-      if (s.bucketTags) {
-        tagsToUpdate = Object.keys(s.bucketTags).map(tagKey => ({
-          Key: tagKey,
-          Value: s.bucketTags[tagKey]
-        }));
+      if (!s.bucketTags) {
+        // bucket tags not configured for this bucket, skip it
+        // so we don't require additional s3:getBucketTagging permissions
+        return null;
       }
+
+      // convert the tag key/value pairs into a TagSet structure for the putBucketTagging command
+      const tagsToUpdate = Object.keys(s.bucketTags).map(tagKey => ({
+        Key: tagKey,
+        Value: s.bucketTags[tagKey]
+      }));
 
       return this.getBucketName(s)
         .then(bucketName => {
