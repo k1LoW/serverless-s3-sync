@@ -393,8 +393,21 @@ class ServerlessS3Sync {
   }
 
   getLocalFiles(dir, files) {
+    const cli = this.serverless.cli;
+    try {
+      fs.accessSync(dir, fs.constants.R_OK);
+    } catch (e) {
+      cli.consoleLog(`${messagePrefix}${chalk.red(`The directory ${dir} does not exist.`)}`);
+      return files;
+    }
     fs.readdirSync(dir).forEach(file => {
       let fullPath = path.join(dir, file);
+      try {
+        fs.accessSync(fullPath, fs.constants.R_OK);
+      } catch (e) {
+        cli.consoleLog(`${messagePrefix}${chalk.red(`The file ${fullPath} doesn not exist.`)}`);
+        return;
+      }
       if (fs.lstatSync(fullPath).isDirectory()) {
         this.getLocalFiles(fullPath, files);
       } else {
