@@ -287,6 +287,8 @@ class ServerlessS3Sync {
               filesToSync = filesToSync.filter(e => e.name !== match);
               return;
             }
+            // to avoid Unexpected Parameter error
+            delete params['OnlyForEnv'];
             filesToSync.push({name: match, params});
           });
         });
