@@ -64,10 +64,10 @@ class ServerlessS3Sync {
 	if (provider.cachedCredentials && typeof(provider.cachedCredentials.accessKeyId) != 'undefined'
 		&& typeof(provider.cachedCredentials.secretAccessKey) != 'undefined'
 		&& typeof(provider.cachedCredentials.sessionToken) != 'undefined') {
-        // Temporarily disabled the below below because Serverless framework is not interpolating ${env:foo}
-        // in provider.credentials.region or provider.cachedCredentials.region
-        // region = provider.cachedCredentials.region
-        region = provider.getRegion();
+    // Temporarily disabled the below below because Serverless framework is not interpolating ${env:foo}
+    // in provider.credentials.region or provider.cachedCredentials.region
+    // region = provider.cachedCredentials.region
+    region = provider.getRegion();
 		awsCredentials = {
 			accessKeyId: provider.cachedCredentials.accessKeyId,
 			secretAccessKey: provider.cachedCredentials.secretAccessKey,
