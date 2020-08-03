@@ -47,7 +47,7 @@ class ServerlessS3Sync {
     };
 
     this.hooks = {
-      'after:deploy:deploy': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(() => Promise.delay(5000)).then(this.syncMetadata).then(this.syncBucketTags),
+      'after:deploy:deploy': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(() => BbPromise.delay(5000)).then(this.syncMetadata).then(this.syncBucketTags),
       'before:remove:remove': () => BbPromise.bind(this).then(this.clear),
       's3sync:sync': () => BbPromise.bind(this).then(this.sync),
       's3sync:metadata': () => BbPromise.bind(this).then(this.syncMetadata),
