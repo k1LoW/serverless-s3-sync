@@ -306,6 +306,8 @@ class ServerlessS3Sync {
               };
               const uploader = this.client().copyObject(params);
               uploader.on('error', (err) => {
+                console.error('copyObject error', params);
+                console.error(err);
                 throw err;
               });
               uploader.on('end', () => {
