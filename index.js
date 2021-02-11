@@ -60,6 +60,14 @@ class ServerlessS3Sync {
     };
   }
 
+  isOffline() {
+    return String(this.options.offline).toUpperCase() === 'TRUE' || process.env.IS_OFFLINE;
+  }
+
+  getEndpoint() {
+      return this.serverless.service.custom.s3Sync.hasOwnProperty('endpoint') ? this.serverless.service.custom.s3Sync.endpoint : null;
+  }
+
   client() {
     const provider = this.serverless.getProvider('aws');
 	let awsCredentials, region;
@@ -83,7 +91,7 @@ class ServerlessS3Sync {
     region: region,
     credentials: awsCredentials
   };
-  if(this.serverless.service.custom.s3Sync.hasOwnProperty('endpoint') && (String(this.options.offline).toUpperCase() === 'TRUE' || process.env.IS_OFFLINE)) {
+  if(this.getEndpoint() && this.isOffline()) {
     s3Options.endpoint = new provider.sdk.Endpoint(this.serverless.service.custom.s3Sync.endpoint);
     s3Options.s3ForcePathStyle = true;
   }
@@ -91,7 +99,7 @@ class ServerlessS3Sync {
       region: region,
       credentials: awsCredentials
     });
-    if(this.serverless.service.custom.s3Sync.hasOwnProperty('endpoint') && String(this.options.offline).toUpperCase() === 'TRUE' || process.env.IS_OFFLINE) {
+    if(this.getEndpoint() && this.isOffline()) {
       //see: https://github.com/aws/aws-sdk-js/issues/1157
       s3Client.shouldDisableBodySigning = () => true
     }
