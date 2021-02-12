@@ -89,3 +89,24 @@ Run `sls deploy --nos3sync`, deploy your serverless stack without syncing local 
 ### `sls s3sync`
 
 Sync local directories and S3 prefixes.
+
+### Offline usage
+
+If also using the plugins `serverless-offline` and `serverless-s3-local`, sync can be supported during development by placing the bucket configuration(s) into the `buckets` object and specifying the alterate `endpoint` (see below).
+
+```yaml
+custom:
+  s3Sync:
+    # an alternate s3 endpoint
+    endpoint: http://localhost:4569
+    buckets:
+    # A simple configuration for copying static assets
+    - bucketName: my-static-site-assets # required
+      bucketPrefix: assets/ # optional
+      localDir: dist/assets # required
+# ...
+```
+
+run `sls offline start --profile s3local` to sync to the local s3 bucket instead of Amazon AWS S3
+
+run `sls deploy` for normal deployment

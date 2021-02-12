@@ -48,6 +48,8 @@ class ServerlessS3Sync {
 
     this.hooks = {
       'after:deploy:deploy': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
+      'after:offline:start:init': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
+      'after:offline:start': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
       'before:remove:remove': () => BbPromise.bind(this).then(this.clear),
       's3sync:sync': () => BbPromise.bind(this).then(this.sync),
       's3sync:metadata': () => BbPromise.bind(this).then(this.syncMetadata),
@@ -56,6 +58,14 @@ class ServerlessS3Sync {
       's3sync:bucket:metadata': () => BbPromise.bind(this).then(this.syncMetadata),
       's3sync:bucket:tags': () => BbPromise.bind(this).then(this.syncBucketTags),
     };
+  }
+
+  isOffline() {
+    return String(this.options.offline).toUpperCase() === 'TRUE' || process.env.IS_OFFLINE;
+  }
+
+  getEndpoint() {
+      return this.serverless.service.custom.s3Sync.hasOwnProperty('endpoint') ? this.serverless.service.custom.s3Sync.endpoint : null;
   }
 
   client() {
@@ -77,15 +87,30 @@ class ServerlessS3Sync {
 		region = provider.getCredentials().region
 		awsCredentials = provider.getCredentials().credentials
 	}
+  let s3Options = {
+    region: region,
+    credentials: awsCredentials
+  };
+  if(this.getEndpoint() && this.isOffline()) {
+    s3Options.endpoint = new provider.sdk.Endpoint(this.serverless.service.custom.s3Sync.endpoint);
+    s3Options.s3ForcePathStyle = true;
+  }
     const s3Client = new provider.sdk.S3({
       region: region,
       credentials: awsCredentials
     });
-    return s3.createClient({ s3Client });
+    if(this.getEndpoint() && this.isOffline()) {
+      //see: https://github.com/aws/aws-sdk-js/issues/1157
+      s3Client.shouldDisableBodySigning = () => true
+    }
+      return s3.createClient({ s3Client });
   }
 
   sync() {
-    const s3Sync = this.serverless.service.custom.s3Sync;
+    let s3Sync = this.serverless.service.custom.s3Sync;
+    if(s3Sync.hasOwnProperty('buckets')) {
+      s3Sync = s3Sync.buckets;
+    }
     const cli = this.serverless.cli;
     if (!Array.isArray(s3Sync)) {
       cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
@@ -207,7 +232,10 @@ class ServerlessS3Sync {
   }
 
   clear() {
-    const s3Sync = this.serverless.service.custom.s3Sync;
+    let s3Sync = this.serverless.service.custom.s3Sync;
+    if(s3Sync.hasOwnProperty('buckets')) {
+      s3Sync = s3Sync.buckets;
+    }
     if (!Array.isArray(s3Sync)) {
       return Promise.resolve();
     }
@@ -255,7 +283,10 @@ class ServerlessS3Sync {
   }
 
   syncMetadata() {
-    const s3Sync = this.serverless.service.custom.s3Sync;
+    let s3Sync = this.serverless.service.custom.s3Sync;
+    if(s3Sync.hasOwnProperty('buckets')) {
+      s3Sync = s3Sync.buckets;
+    }
     const cli = this.serverless.cli;
     if (!Array.isArray(s3Sync)) {
       cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
@@ -342,7 +373,10 @@ class ServerlessS3Sync {
   }
 
   syncBucketTags() {
-    const s3Sync = this.serverless.service.custom.s3Sync;
+    let s3Sync = this.serverless.service.custom.s3Sync;
+    if(s3Sync.hasOwnProperty('buckets')) {
+      s3Sync = s3Sync.buckets;
+    }
     const cli = this.serverless.cli;
     if (!Array.isArray(s3Sync)) {
       cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
