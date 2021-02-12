@@ -84,8 +84,8 @@ class ServerlessS3Sync {
 			sessionToken: provider.cachedCredentials.sessionToken,
 		}
 	} else {
-		region = provider.getCredentials().region
-		awsCredentials = provider.getCredentials().credentials
+		region = provider.getRegion() || provider.getCredentials().region;
+		awsCredentials = provider.getCredentials().credentials;
 	}
   let s3Options = {
     region: region,
