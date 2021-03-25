@@ -50,7 +50,7 @@ class ServerlessS3Sync {
       'after:deploy:deploy': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
       'after:offline:start:init': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
       'after:offline:start': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
-      'before:remove:remove': () => BbPromise.bind(this).then(this.clear),
+      'before:remove:remove': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.clear),
       's3sync:sync': () => BbPromise.bind(this).then(this.sync),
       's3sync:metadata': () => BbPromise.bind(this).then(this.syncMetadata),
       's3sync:tags': () => BbPromise.bind(this).then(this.syncBucketTags),
