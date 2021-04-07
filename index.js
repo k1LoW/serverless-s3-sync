@@ -33,7 +33,8 @@ class ServerlessS3Sync {
               bucket: {
                 usage: 'Specify the bucket you want to deploy (e.g. "-b myBucket1")',
                 required: true,
-                shortcut: 'b'
+                shortcut: 'b',
+                type: 'string'
               }
             },
             lifecycleEvents: [
