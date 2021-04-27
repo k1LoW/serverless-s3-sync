@@ -47,11 +47,13 @@ class ServerlessS3Sync {
       }
     };
 
+    const autoSync = this.getAutoSync();
+
     this.hooks = {
-      'after:deploy:deploy': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
-      'after:offline:start:init': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
-      'after:offline:start': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
-      'before:remove:remove': () => options.nos3sync ? undefined : BbPromise.bind(this).then(this.clear),
+      'after:deploy:deploy': () => autoSync ? BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags) : undefined,
+      'after:offline:start:init': () => autoSync ? BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags) : undefined,
+      'after:offline:start': () => autoSync ? BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags): undefined,
+      'before:remove:remove': () => autoSync ? BbPromise.bind(this).then(this.clear) : undefined,
       's3sync:sync': () => BbPromise.bind(this).then(this.sync),
       's3sync:metadata': () => BbPromise.bind(this).then(this.syncMetadata),
       's3sync:tags': () => BbPromise.bind(this).then(this.syncBucketTags),
@@ -67,6 +69,14 @@ class ServerlessS3Sync {
 
   getEndpoint() {
       return this.serverless.service.custom.s3Sync.hasOwnProperty('endpoint') ? this.serverless.service.custom.s3Sync.endpoint : null;
+  }
+
+  getAutoSync() {
+    if (this.options.nos3sync) {
+      return false;
+    }
+    const autoSync = this.serverless.service.custom.s3Sync.hasOwnProperty('autoSync') ? this.serverless.service.custom.s3Sync.autoSync : true;
+    return String(autoSync).toUpperCase === 'TRUE';
   }
 
   client() {
