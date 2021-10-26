@@ -109,7 +109,9 @@ custom:
 # ...
 ```
 
-run `sls offline start --profile s3local` to sync to the local s3 bucket instead of Amazon AWS S3
+As per [serverless-s3-local's instructions](https://github.com/ar90n/serverless-s3-local#triggering-aws-events-offline), once a local credentials profile is configured, run `sls offline start --aws-profile s3local` to sync to the local s3 bucket instead of Amazon AWS S3
+
+> `bucketNameKey` will not work in offline mode and can only be used in conjunction with valid AWS credentials, use `bucketName` instead.
 
 run `sls deploy` for normal deployment
 

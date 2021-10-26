@@ -106,10 +106,7 @@ class ServerlessS3Sync {
     s3Options.endpoint = new provider.sdk.Endpoint(this.serverless.service.custom.s3Sync.endpoint);
     s3Options.s3ForcePathStyle = true;
   }
-    const s3Client = new provider.sdk.S3({
-      region: region,
-      credentials: awsCredentials
-    });
+    const s3Client = new provider.sdk.S3(s3Options);
     if(this.getEndpoint() && this.isOffline()) {
       //see: https://github.com/aws/aws-sdk-js/issues/1157
       s3Client.shouldDisableBodySigning = () => true
