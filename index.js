@@ -348,7 +348,7 @@ class ServerlessS3Sync {
                 ...file.params,
                 ...{
                   CopySource: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, `${bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`)),
-                  Key: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, '')),
+                  Key: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, `${bucketPrefix ? bucketPrefix.replace(/^\//, '') + '/' : ''}`)),
                   Bucket: bucketName,
                   ACL: acl,
                   MetadataDirective: 'REPLACE'
