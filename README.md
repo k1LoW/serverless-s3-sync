@@ -112,3 +112,18 @@ custom:
 run `sls offline start --profile s3local` to sync to the local s3 bucket instead of Amazon AWS S3
 
 run `sls deploy` for normal deployment
+
+### Always disable auto sync
+
+```yaml
+custom:
+  s3Sync:
+    # Disable sync when sls deploy and sls remove
+    noSync: true
+    buckets:
+    # A simple configuration for copying static assets
+    - bucketName: my-static-site-assets # required
+      bucketPrefix: assets/ # optional
+      localDir: dist/assets # required
+# ...
+```
