@@ -1,10 +1,9 @@
+const getAwsOptions = require('./getAwsOptions')
+
 function resolveStackOutput(plugin, outputKey) {
   const provider = plugin.serverless.getProvider('aws');
-  const awsCredentials = provider.getCredentials();
-  const cfn = new provider.sdk.CloudFormation({
-    region: provider.getRegion(),
-    credentials: awsCredentials.credentials
-  });
+  const options = getAwsOptions(provider)
+  const cfn = new provider.sdk.CloudFormation(options);
   const stackName = provider.naming.getStackName();
 
   return cfn

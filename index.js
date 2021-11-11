@@ -7,6 +7,7 @@ const minimatch = require('minimatch');
 const path = require('path');
 const fs = require('fs');
 const resolveStackOutput = require('./resolveStackOutput')
+const getAwsOptions = require('./getAwsOptions')
 const messagePrefix = 'S3 Sync: ';
 const mime = require('mime');
 const child_process = require('child_process');
@@ -81,37 +82,18 @@ class ServerlessS3Sync {
 
   client() {
     const provider = this.serverless.getProvider('aws');
-	let awsCredentials, region;
-	if (provider.cachedCredentials && typeof(provider.cachedCredentials.accessKeyId) != 'undefined'
-		&& typeof(provider.cachedCredentials.secretAccessKey) != 'undefined'
-		&& typeof(provider.cachedCredentials.sessionToken) != 'undefined') {
-    // Temporarily disabled the below below because Serverless framework is not interpolating ${env:foo}
-    // in provider.credentials.region or provider.cachedCredentials.region
-    // region = provider.cachedCredentials.region
-    region = provider.getRegion();
-		awsCredentials = {
-			accessKeyId: provider.cachedCredentials.accessKeyId,
-			secretAccessKey: provider.cachedCredentials.secretAccessKey,
-			sessionToken: provider.cachedCredentials.sessionToken,
-		}
-	} else {
-		region = provider.getRegion() || provider.getCredentials().region;
-		awsCredentials = provider.getCredentials().credentials;
-	}
-  let s3Options = {
-    region: region,
-    credentials: awsCredentials
-  };
-  if(this.getEndpoint() && this.isOffline()) {
-    s3Options.endpoint = new provider.sdk.Endpoint(this.serverless.service.custom.s3Sync.endpoint);
-    s3Options.s3ForcePathStyle = true;
-  }
+    const s3Options = getAwsOptions(provider)
+
+    if(this.getEndpoint() && this.isOffline()) {
+      s3Options.endpoint = new provider.sdk.Endpoint(this.serverless.service.custom.s3Sync.endpoint);
+      s3Options.s3ForcePathStyle = true;
+    }
     const s3Client = new provider.sdk.S3(s3Options);
     if(this.getEndpoint() && this.isOffline()) {
       //see: https://github.com/aws/aws-sdk-js/issues/1157
       s3Client.shouldDisableBodySigning = () => true
     }
-      return s3.createClient({ s3Client });
+    return s3.createClient({ s3Client });
   }
 
   sync() {
