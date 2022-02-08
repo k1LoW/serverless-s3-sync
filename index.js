@@ -45,6 +45,22 @@ class ServerlessS3Sync {
             ]
           }
         }
+      },
+      deploy: {
+        options: {
+          nos3sync: {
+            type: 'boolean',
+            usage: 'Disable sync to S3 during deploy'
+          }
+        }
+      },
+      remove: {
+        options: {
+          nos3sync: {
+            type: 'boolean',
+            usage: 'Disable sync to S3 during remove'
+          }
+        }
       }
     };
 
