@@ -22,6 +22,16 @@ plugins:
   - serverless-s3-sync
 ```
 
+### Compatibility with Serverless Framework
+
+Version 2.0.0 is compatible with Serverless Framework v3, but it uses the legacy logging interface. Version 3.0.0 and later uses the [new logging interface](https://www.serverless.com/framework/docs/guides/plugins/cli-output).
+
+|serverless-s3-sync|Serverless Framework|
+|---|---|
+|v1.x|v1.x, v2.x|
+|v2.0.0|v1.x, v2.x, v3.x|
+|≥ v3.0.0|v3.x|
+
 ## Setup
 
 ```yaml
