@@ -2,22 +2,22 @@
 
 const BbPromise = require('bluebird');
 const s3 = require('@auth0/s3');
-const chalk = require('chalk');
 const minimatch = require('minimatch');
 const path = require('path');
 const fs = require('fs');
 const resolveStackOutput = require('./resolveStackOutput')
 const getAwsOptions = require('./getAwsOptions')
-const messagePrefix = 'S3 Sync: ';
 const mime = require('mime');
 const child_process = require('child_process');
 
 const toS3Path = (osPath) => osPath.replace(new RegExp(`\\${path.sep}`, 'g'), '/');
 
 class ServerlessS3Sync {
-  constructor(serverless, options) {
+  constructor(serverless, options, logging) {
     this.serverless = serverless;
     this.options = options || {};
+    this.log = logging.log;
+    this.progress = logging.progress;
     this.servicePath = this.serverless.service.serverless.config.servicePath;
 
     this.commands = {
@@ -71,12 +71,12 @@ class ServerlessS3Sync {
       'after:offline:start:init': () => noSync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
       'after:offline:start': () => noSync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
       'before:remove:remove': () => noSync ? undefined : BbPromise.bind(this).then(this.clear),
-      's3sync:sync': () => BbPromise.bind(this).then(this.sync),
-      's3sync:metadata': () => BbPromise.bind(this).then(this.syncMetadata),
-      's3sync:tags': () => BbPromise.bind(this).then(this.syncBucketTags),
-      's3sync:bucket:sync': () => BbPromise.bind(this).then(this.sync),
-      's3sync:bucket:metadata': () => BbPromise.bind(this).then(this.syncMetadata),
-      's3sync:bucket:tags': () => BbPromise.bind(this).then(this.syncBucketTags),
+      's3sync:sync': () => BbPromise.bind(this).then(() => this.sync(true)),
+      's3sync:metadata': () => BbPromise.bind(this).then(() => this.syncMetadata(true)),
+      's3sync:tags': () => BbPromise.bind(this).then(() => this.syncBucketTags(true)),
+      's3sync:bucket:sync': () => BbPromise.bind(this).then(() => this.sync(true)),
+      's3sync:bucket:metadata': () => BbPromise.bind(this).then(() => this.syncMetadata(true)),
+      's3sync:bucket:tags': () => BbPromise.bind(this).then(() => this.syncBucketTags(true)),
     };
   }
 
@@ -112,21 +112,22 @@ class ServerlessS3Sync {
     return s3.createClient({ s3Client });
   }
 
-  sync() {
+  sync(invokedAsCommand) {
     let s3Sync = this.serverless.service.custom.s3Sync;
     if(s3Sync.hasOwnProperty('buckets')) {
       s3Sync = s3Sync.buckets;
     }
-    const cli = this.serverless.cli;
     if (!Array.isArray(s3Sync)) {
-      cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
+      this.log.error('serverless-s3-sync requires at least one configuration entry in custom.s3Sync')
       return Promise.resolve();
     }
-    if (this.options.bucket) {
-      cli.consoleLog(`${messagePrefix}${chalk.yellow(`Syncing directory attached to S3 bucket ${this.options.bucket}...`)}`);
-    } else {
-      cli.consoleLog(`${messagePrefix}${chalk.yellow('Syncing directories and S3 prefixes...')}`);
-    }
+
+    const taskProgress = this.progress.create({
+      message: this.options.bucket?
+        `Syncing directory attached to S3 bucket ${this.options.bucket}` :
+        'Syncing directories to S3 buckets'
+    })
+
     const servicePath = this.servicePath;
     const promises = s3Sync.map((s) => {
       let bucketPrefix = '';
@@ -167,8 +168,13 @@ class ServerlessS3Sync {
           return new Promise((resolve) => {
             const localDir = [servicePath, s.localDir].join('/');
 
+            // we're doing the upload in parallel for all buckets, so create one progress entry for each
+            let percent = 0;
+            const getProgressMessage = () => `${localDir}: sync with bucket ${bucketName} (${percent}%)`;
+            const bucketProgress = this.progress.create({ message: getProgressMessage() })
+
             if (typeof(preCommand) != 'undefined') {
-              cli.consoleLog(`${messagePrefix}${chalk.yellow('Running pre-command...')}`);
+              bucketProgress.update(`${localDir}: running pre-command...`);
               child_process.execSync(preCommand, { stdio: 'inherit' });
             }
 
@@ -208,11 +214,14 @@ class ServerlessS3Sync {
             if (typeof(defaultContentType) != 'undefined') {
               Object.assign(params, {defaultContentType: defaultContentType})
             }
+
+            bucketProgress.update(getProgressMessage());
+
             const uploader = this.client().uploadDir(params);
             uploader.on('error', (err) => {
+              bucketProgress.remove();
               throw err;
             });
-            let percent = 0;
             uploader.on('progress', () => {
               if (uploader.progressTotal === 0) {
                 return;
@@ -220,10 +229,11 @@ class ServerlessS3Sync {
               const current = Math.round((uploader.progressAmount / uploader.progressTotal) * 10) * 10;
               if (current > percent) {
                 percent = current;
-                cli.printDot();
+                bucketProgress.update(getProgressMessage());
               }
             });
             uploader.on('end', () => {
+              bucketProgress.remove();
               resolve('done');
             });
           });
@@ -231,9 +241,14 @@ class ServerlessS3Sync {
     });
     return Promise.all(promises)
       .then(() => {
-        cli.printDot();
-        cli.consoleLog('');
-        cli.consoleLog(`${messagePrefix}${chalk.yellow('Synced.')}`);
+        if (invokedAsCommand) {
+          this.log.success('Synced files to S3 buckets');
+        } else {
+          this.log.verbose('Synced files to S3 buckets');
+        }
+      })
+      .finally(() => {
+        taskProgress.remove();
       });
   }
 
@@ -243,10 +258,12 @@ class ServerlessS3Sync {
       s3Sync = s3Sync.buckets;
     }
     if (!Array.isArray(s3Sync)) {
+      this.log.notice(`No configuration found for serverless-s3-sync, skipping removal...`);
       return Promise.resolve();
     }
-    const cli = this.serverless.cli;
-    cli.consoleLog(`${messagePrefix}${chalk.yellow('Removing S3 objects...')}`);
+
+    const taskProgress = this.progress.create({ message: 'Removing objects from S3 buckets' });
+
     const promises = s3Sync.map((s) => {
       let bucketPrefix = '';
       if (s.hasOwnProperty('bucketPrefix')) {
@@ -259,11 +276,16 @@ class ServerlessS3Sync {
               Bucket: bucketName,
               Prefix: bucketPrefix
             };
+
+            let percent = 0;
+            let getProgressMessage = () => `${bucketName}: removing files with prefix ${bucketPrefix} (${percent}%)`
+            const bucketProgress = this.progress.create({ message: getProgressMessage() })
+
             const uploader = this.client().deleteDir(params);
             uploader.on('error', (err) => {
+              bucketProgress.remove();
               throw err;
             });
-            let percent = 0;
             uploader.on('progress', () => {
               if (uploader.progressTotal === 0) {
                 return;
@@ -271,34 +293,37 @@ class ServerlessS3Sync {
               const current = Math.round((uploader.progressAmount / uploader.progressTotal) * 10) * 10;
               if (current > percent) {
                 percent = current;
-                cli.printDot();
+                bucketProgress.update(getProgressMessage());
               }
             });
             uploader.on('end', () => {
+              bucketProgress.remove();
               resolve('done');
             });
           });
         });
     });
-    return Promise.all(promises)
+    return Promise.all((promises))
       .then(() => {
-        cli.printDot();
-        cli.consoleLog('');
-        cli.consoleLog(`${messagePrefix}${chalk.yellow('Removed.')}`);
+        this.log.verbose('Removed objects from S3 buckets');
+      })
+      .finally(() => {
+        taskProgress.remove();
       });
   }
 
-  syncMetadata() {
+  syncMetadata(invokedAsCommand) {
     let s3Sync = this.serverless.service.custom.s3Sync;
     if(s3Sync.hasOwnProperty('buckets')) {
       s3Sync = s3Sync.buckets;
     }
-    const cli = this.serverless.cli;
     if (!Array.isArray(s3Sync)) {
-      cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
+      this.log.error('serverless-s3-sync requires at least one configuration entry in custom.s3Sync');
       return Promise.resolve();
     }
-    cli.consoleLog(`${messagePrefix}${chalk.yellow('Syncing metadata...')}`);
+
+    const taskProgress = this.progress.create({ message: 'Syncing bucket metadata' });
+
     const servicePath = this.servicePath;
     const promises = s3Sync.map( async (s) => {
       let bucketPrefix = '';
@@ -342,7 +367,13 @@ class ServerlessS3Sync {
             return null;
           }
 
-          return Promise.all(filesToSync.map((file) => {
+          const bucketDir = `${bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`;
+
+          let percent = 0;
+          const getProgressMessage = () => `${localDir}: sync bucket metadata to ${bucketDir} (${percent}%)`
+          const bucketProgress = this.progress.create({ message: getProgressMessage() })
+
+          return Promise.all(filesToSync.map((file, index) => {
             return new Promise((resolve) => {
               let contentTypeObject = {};
               let detectedContentType = mime.getType(file.name)
@@ -353,7 +384,7 @@ class ServerlessS3Sync {
                 ...contentTypeObject,
                 ...file.params,
                 ...{
-                  CopySource: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, `${bucketName}${bucketPrefix == '' ? '' : bucketPrefix}/`)),
+                  CopySource: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, bucketDir)),
                   Key: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, `${bucketPrefix ? bucketPrefix.replace(/^\//, '') + '/' : ''}`)),
                   Bucket: bucketName,
                   ACL: acl,
@@ -365,31 +396,43 @@ class ServerlessS3Sync {
                 throw err;
               });
               uploader.on('end', () => {
+                const current = Math.round((index / filesToSync.length) * 10) * 10;
+                if (current > percent) {
+                  percent = current;
+                  bucketProgress.update(getProgressMessage())
+                }
                 resolve('done');
               });
             });
-          }));
+          })).finally(() => {
+            bucketProgress.remove();
+          });
         });
     });
     return Promise.all((promises))
       .then(() => {
-        cli.printDot();
-        cli.consoleLog('');
-        cli.consoleLog(`${messagePrefix}${chalk.yellow('Synced metadata.')}`);
+        if (invokedAsCommand) {
+          this.log.success('Synced bucket metadata');
+        } else {
+          this.log.verbose('Synced bucket metadata');
+        }
+      })
+      .finally(() => {
+        taskProgress.remove();
       });
   }
 
-  syncBucketTags() {
+  syncBucketTags(invokedAsCommand) {
     let s3Sync = this.serverless.service.custom.s3Sync;
     if(s3Sync.hasOwnProperty('buckets')) {
       s3Sync = s3Sync.buckets;
     }
-    const cli = this.serverless.cli;
     if (!Array.isArray(s3Sync)) {
-      cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
+      this.log.error('serverless-s3-sync requires at least one configuration entry in custom.s3Sync');
       return Promise.resolve();
     }
-    cli.consoleLog(`${messagePrefix}${chalk.yellow('Updating bucket tags...')}`);
+
+    const taskProgress = this.progress.create({ message: 'Updating bucket tags' });
 
     const promises = s3Sync.map( async (s) => {
       if (!s.bucketName && !s.bucketNameKey) {
@@ -416,6 +459,8 @@ class ServerlessS3Sync {
             return null;
           }
 
+          const bucketProgress = this.progress.create({ message: `${bucketName}: sync bucket tags` })
+
           // AWS.S3 does not have an option to append tags to a bucket, it can only rewrite the whole set of tags
           // To avoid removing system tags set by other tools, we read the existing tags, merge our tags in the list
           // and then write them all back
@@ -432,14 +477,22 @@ class ServerlessS3Sync {
               };
               return this.client().s3.putBucketTagging(putParams).promise();
             })
+            .finally(() => {
+              bucketProgress.remove();
+            });
 
         });
     });
     return Promise.all((promises))
       .then(() => {
-        cli.printDot();
-        cli.consoleLog('');
-        cli.consoleLog(`${messagePrefix}${chalk.yellow('Updated bucket tags.')}`);
+        if (invokedAsCommand) {
+          this.log.success('Updated bucket tags');
+        } else {
+          this.log.verbose('Updated bucket tags');
+        }
+      })
+      .finally(() => {
+        taskProgress.remove();
       });
   }
 
@@ -455,11 +508,10 @@ class ServerlessS3Sync {
   }
 
   getLocalFiles(dir, files) {
-    const cli = this.serverless.cli;
     try {
       fs.accessSync(dir, fs.constants.R_OK);
     } catch (e) {
-      cli.consoleLog(`${messagePrefix}${chalk.red(`The directory ${dir} does not exist.`)}`);
+      this.log.error(`The directory ${dir} does not exist.`);
       return files;
     }
     fs.readdirSync(dir).forEach(file => {
@@ -467,7 +519,7 @@ class ServerlessS3Sync {
       try {
         fs.accessSync(fullPath, fs.constants.R_OK);
       } catch (e) {
-        cli.consoleLog(`${messagePrefix}${chalk.red(`The file ${fullPath} doesn not exist.`)}`);
+        this.log.error(`The file ${fullPath} does not exist.`);
         return;
       }
       if (fs.lstatSync(fullPath).isDirectory()) {

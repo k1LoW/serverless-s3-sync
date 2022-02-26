@@ -16,8 +16,10 @@
   "dependencies": {
     "@auth0/s3": "^1.0.0",
     "bluebird": "^3.5.4",
-    "chalk": "^2.4.2",
     "mime": "^2.4.4",
     "minimatch": "^3.0.4"
+  },
+  "peerDependencies": {
+    "serverless": "^3.0.0"
   }
 }
