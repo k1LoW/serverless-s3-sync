@@ -138,6 +138,9 @@ class ServerlessS3Sync {
       if (s.hasOwnProperty('acl')) {
         acl = s.acl;
       }
+      if (s.hasOwnProperty('enabled') && s.enabled === false) {
+        return;
+      }
       let followSymlinks = false;
       if (s.hasOwnProperty('followSymlinks')) {
         followSymlinks = s.followSymlinks;

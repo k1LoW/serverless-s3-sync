@@ -67,6 +67,12 @@ custom:
     - bucketName: ${cf:another-cf-stack-name.ExternalBucketOutputKey}
       localDir: path
 
+    # Setting the optional enabled field to false will disable this rule.
+    # Referencing other variables allows this rule to become conditional
+    - bucketName: DisabledSync
+      localDir: path
+      enabled: false
+
 resources:
   Resources:
     AssetsBucket:
