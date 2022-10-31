@@ -356,7 +356,7 @@ class ServerlessS3Sync {
       }
       const localDir = path.join(servicePath, s.localDir);
       let filesToSync = [];
-      let ignoreFiles = [];
+      let ignoreFiles = ['.DS_Store'];
       if(Array.isArray(s.params)) {
         s.params.forEach((param) => {
           const glob = Object.keys(param)[0];
