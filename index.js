@@ -12,6 +12,20 @@ const child_process = require('child_process');
 
 const toS3Path = (osPath) => osPath.replace(new RegExp(`\\${path.sep}`, 'g'), '/');
 
+/*
+  From @auth0/s3/lib/index.js - used when uploading the file in the first place
+  - added the + character to the set that are escaped.
+  Using is is needed to update the meta data of keys that contain spaces, +, etc...
+  to avoid a Key not found exception.
+*/
+function encodeSpecialCharacters(filename) {
+  // Note: these characters are valid in URIs, but S3 does not like them for
+  // some reason.
+  return encodeURI(filename).replace(/[+!'()* ]/g, function (char) {
+    return '%' + char.charCodeAt(0).toString(16);
+  });
+}
+
 class ServerlessS3Sync {
   constructor(serverless, options, logging) {
     this.serverless = serverless;
@@ -387,8 +401,8 @@ class ServerlessS3Sync {
                 ...contentTypeObject,
                 ...file.params,
                 ...{
-                  CopySource: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, bucketDir)),
-                  Key: toS3Path(file.name.replace(path.resolve(localDir) + path.sep, `${bucketPrefix ? bucketPrefix.replace(/^\//, '') + '/' : ''}`)),
+                  CopySource: encodeSpecialCharacters(toS3Path(file.name.replace(path.resolve(localDir) + path.sep, bucketDir))),
+                  Key: encodeSpecialCharacters(toS3Path(file.name.replace(path.resolve(localDir) + path.sep, `${bucketPrefix ? bucketPrefix.replace(/^\//, '') + '/' : ''}`))),
                   Bucket: bucketName,
                   ACL: acl,
                   MetadataDirective: 'REPLACE'
