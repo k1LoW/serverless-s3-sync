@@ -75,6 +75,24 @@ class ServerlessS3Sync {
             usage: 'Disable sync to S3 during remove'
           }
         }
+      },
+      offline: {
+        options: {
+          nos3sync: {
+            type: 'boolean',
+            usage: 'Disable sync to S3 for serverless offline'
+          }
+        },
+        commands: {
+          start: {
+            options: {
+              nos3sync: {
+                type: 'boolean',
+                usage: 'Disable sync to S3 for serverless offline start command'
+              }
+            }
+          }
+        }
       }
     };
 
