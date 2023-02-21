@@ -33,6 +33,7 @@ class ServerlessS3Sync {
     this.log = logging.log;
     this.progress = logging.progress;
     this.servicePath = this.serverless.service.serverless.config.servicePath;
+    this.offline = String(this.options.offline).toUpperCase() === 'TRUE';
 
     this.commands = {
       s3sync: {
@@ -102,6 +103,8 @@ class ServerlessS3Sync {
       'after:deploy:deploy': () => noSync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
       'after:offline:start:init': () => noSync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
       'after:offline:start': () => noSync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
+      'before:offline:start': this.setOffline.bind(this),
+      'before:offline:start:init': this.setOffline.bind(this),
       'before:remove:remove': () => noSync ? undefined : BbPromise.bind(this).then(this.clear),
       's3sync:sync': () => BbPromise.bind(this).then(() => this.sync(true)),
       's3sync:metadata': () => BbPromise.bind(this).then(() => this.syncMetadata(true)),
@@ -112,8 +115,12 @@ class ServerlessS3Sync {
     };
   }
 
+  setOffline() {
+    this.offline = true
+  }
+
   isOffline() {
-    return String(this.options.offline).toUpperCase() === 'TRUE' || process.env.IS_OFFLINE;
+    return this.offline || process.env.IS_OFFLINE;
   }
 
   getEndpoint() {
