@@ -17,7 +17,9 @@
     "@auth0/s3": "^1.0.0",
     "bluebird": "^3.5.4",
     "mime": "^2.4.4",
-    "minimatch": "^3.0.4"
+    "minimatch": "^3.0.4",
+    "aws-sdk": "^2.1354.0",
+    "xml2js": "^0.5.0"
   },
   "peerDependencies": {
     "serverless": "^3.0.0"
