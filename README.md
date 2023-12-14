@@ -145,3 +145,18 @@ custom:
       localDir: dist/assets # required
 # ...
 ```
+
+### Sync on other hooks
+```yaml
+custom:
+  s3Sync:
+    hooks:
+      # This hook will run after the deploy:finalize hook
+      - after:deploy:finalize
+    buckets:
+    # A simple configuration for copying static assets
+    - bucketName: my-static-site-assets # required
+      bucketPrefix: assets/ # optional
+      localDir: dist/assets # required
+# ...
+```
