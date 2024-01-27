@@ -46,7 +46,7 @@ custom:
     - bucketName: my-other-site
       localDir: path/to/other-site
       deleteRemoved: true # optional, indicates whether sync deletes files no longer present in localDir. Defaults to 'true'
-      acl: public-read # optional
+      acl: public-read # optional
       followSymlinks: true # optional
       defaultContentType: text/html # optional
       params: # optional
