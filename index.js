@@ -304,6 +304,9 @@ class ServerlessS3Sync {
       if (s.hasOwnProperty('bucketPrefix')) {
         bucketPrefix = s.bucketPrefix;
       }
+      if (s.hasOwnProperty('enabled') && s.enabled === false) {
+        return;
+      }
       return this.getBucketName(s)
         .then(bucketName => {
           return new Promise((resolve) => {
