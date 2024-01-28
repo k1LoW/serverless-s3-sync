@@ -97,6 +97,10 @@ class ServerlessS3Sync {
     };
 
     const noSync = this.getNoSync();
+    const customHooks = this.getCustomHooks().reduce((acc, hook) => {
+      acc[hook] = () => BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags);
+      return acc;
+    }, {});
 
     this.hooks = {
       'after:deploy:deploy': () => noSync ? undefined : BbPromise.bind(this).then(this.sync).then(this.syncMetadata).then(this.syncBucketTags),
@@ -109,6 +113,7 @@ class ServerlessS3Sync {
       's3sync:bucket:sync': () => BbPromise.bind(this).then(() => this.sync(true)),
       's3sync:bucket:metadata': () => BbPromise.bind(this).then(() => this.syncMetadata(true)),
       's3sync:bucket:tags': () => BbPromise.bind(this).then(() => this.syncBucketTags(true)),
+      ...customHooks,
     };
   }
 
@@ -126,6 +131,10 @@ class ServerlessS3Sync {
     }
     const noSync = this.serverless.service.custom.s3Sync.hasOwnProperty('noSync') ? this.serverless.service.custom.s3Sync.noSync : false;
     return String(noSync).toUpperCase() === 'TRUE';
+  }
+
+  getCustomHooks() {
+    return this.serverless.service.custom.s3Sync.hasOwnProperty('hooks') ? this.serverless.service.custom.s3Sync.hooks : [];
   }
 
   client() {
