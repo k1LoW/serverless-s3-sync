@@ -20,6 +20,6 @@
     "minimatch": "^3.0.4"
   },
   "peerDependencies": {
-    "serverless": "^3.0.0"
+    "serverless": "3.x || 4.x"
   }
 }
