@@ -1,4 +1,22 @@
-# Serverless S3 Sync [![npm](https://img.shields.io/npm/v/serverless-s3-sync.svg)](https://www.npmjs.com/package/serverless-s3-sync)
+# [DEVELOPMENT HAS STOPPED: This Repository is Archived] Serverless S3 Sync [![npm](https://img.shields.io/npm/v/serverless-s3-sync.svg)](https://www.npmjs.com/package/serverless-s3-sync)
+
+**The development of `serverless-s3-sync` has been permanently stopped and this repository is now archived.**
+
+This means:
+
+* **This project is no longer maintained.**
+* **No further updates, security fixes, or maintenance of any kind will be provided.**
+* **All Pull Requests and Issues will be ignored.**
+
+We sincerely thank you for your usage and contribution.
+
+### Important Security Note: NPM Package Name Reservation
+
+We will be keeping the **NPM package name** (`serverless-s3-sync`) reserved indefinitely. This is a crucial security measure to prevent a third party from taking the name and distributing potentially malicious software (a **supply chain attack**). We apologize for reserving the name but must prioritize the security of users who might still rely on older versions.
+
+We strongly recommend migrating to an alternative solution immediately.
+
+---
 
 > A plugin to sync local directories and S3 prefixes for Serverless Framework :zap: .
 
